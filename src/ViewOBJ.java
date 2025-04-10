@@ -57,7 +57,14 @@ class RenderPanel extends JPanel {
     private JSlider headingSlider;
     private JSlider pitchSlider;
 
-    private boolean wireframeMode = true;
+    private int lastX, lastY;
+    private double headingValue = 180;
+    private double pitchValue = 180;
+    private double xOffset = 0;
+    private double yOffset = 0;
+    private boolean isPanning = false;
+    private double zoomFactor = 1.0;
+    private boolean wireframeMode = false;
 
     public void toggleRenderMode() {
         wireframeMode = !wireframeMode;
@@ -68,6 +75,53 @@ class RenderPanel extends JPanel {
         this.model = model;
         this.headingSlider = headingSlider;
         this.pitchSlider = pitchSlider;
+
+
+        addMouseWheelListener(e -> {
+            if (e.getPreciseWheelRotation() < 0) {
+                zoomFactor *= 1.1; // Zoom in
+            } else {
+                zoomFactor *= 0.9; // Zoom out
+            }
+            zoomFactor = Math.max(0.1, Math.min(5.0, zoomFactor)); // Limit zoom range
+            repaint();
+        });
+
+        addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                lastX = e.getX();
+                lastY = e.getY();
+
+                // Use right mouse button for panning, left for rotation
+                isPanning = SwingUtilities.isRightMouseButton(e);
+            }
+        });
+
+        addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                int dx = e.getX() - lastX;
+                int dy = e.getY() - lastY;
+
+                if (isPanning) {
+                    // Pan the model
+                    xOffset += dx;
+                    yOffset += dy;
+                } else {
+                    // Rotate the model (existing functionality)
+                    headingValue = (headingValue + dx * 0.5) % 360;
+                    pitchValue = Math.max(0, Math.min(360, pitchValue + dy * 0.5));
+
+                    headingSlider.setValue((int)headingValue);
+                    pitchSlider.setValue((int)pitchValue);
+                }
+
+                lastX = e.getX();
+                lastY = e.getY();
+                repaint();
+            }
+        });
 
         setBackground(Color.BLACK);
     }
@@ -93,10 +147,10 @@ class RenderPanel extends JPanel {
         double pitch = Math.toRadians(pitchSlider.getValue());
 
         double maxSize = model.getMaxSize();
-        double scale = Math.min(getWidth(), getHeight()) / maxSize * 0.5;
+        double scale = Math.min(getWidth(), getHeight()) / maxSize * 0.5 * zoomFactor;
 
-        int centerX = getWidth() / 2;
-        int centerY = getHeight() / 2;
+        int centerX = getWidth() / 2 + (int)xOffset;
+        int centerY = getHeight() / 2 + (int)yOffset;
 
         for (Face face : model.faces) {
             int[] xPoints = new int[face.vertexIndices.size()];
