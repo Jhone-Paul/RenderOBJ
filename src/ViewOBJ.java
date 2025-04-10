@@ -27,6 +27,8 @@ public class ViewOBJ {
             System.err.println("Error loading model: " + e.getMessage());
             e.printStackTrace();
         }
+        JToggleButton wireframe = new JToggleButton("Wireframe");
+        pane.add(wireframe, BorderLayout.NORTH);
 
         JSlider headingSlider = new JSlider(0, 360, 180);
         pane.add(headingSlider, BorderLayout.SOUTH);
@@ -37,6 +39,11 @@ public class ViewOBJ {
         RenderPanel renderPanel = new RenderPanel(model, headingSlider, pitchSlider);
         pane.add(renderPanel, BorderLayout.CENTER);
 
+        wireframe.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                renderPanel.toggleRenderMode();
+            }
+        });
         headingSlider.addChangeListener(e -> renderPanel.repaint());
         pitchSlider.addChangeListener(e -> renderPanel.repaint());
 
@@ -49,6 +56,13 @@ class RenderPanel extends JPanel {
     private Model3D model;
     private JSlider headingSlider;
     private JSlider pitchSlider;
+
+    private boolean wireframeMode = true;
+
+    public void toggleRenderMode() {
+        wireframeMode = !wireframeMode;
+        repaint();
+    }
 
     public RenderPanel(Model3D model, JSlider headingSlider, JSlider pitchSlider) {
         this.model = model;
@@ -114,8 +128,10 @@ class RenderPanel extends JPanel {
                 yPoints[i] = (int) screenY;
             }
 
-            if (face.vertexIndices.size() >= 3) {
+            if (wireframeMode) {
                 g2.drawPolygon(xPoints, yPoints, face.vertexIndices.size());
+            } else {
+                g2.fillPolygon(xPoints, yPoints, face.vertexIndices.size());
             }
         }
     }
